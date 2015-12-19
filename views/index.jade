@@ -1,0 +1,175 @@
+extends layout
+
+block content
+    style.
+        #param {
+            position: absolute;
+            top: 0px;
+            height: 180px;
+            left: 0px;
+            width: 20%;
+            background-color: #ccf;
+            overflow: auto;
+        }
+        #modules {
+            position: absolute;
+            top: 180px;
+            bottom: 0px;
+            left: 0px;
+            width: 20%;
+            background-color: #cfc;
+            overflow: auto;
+        }
+        #header {
+            position: absolute;
+            top: 0px;
+            height: 10ex;
+            right: 0px;
+            width: 80%;
+            background-color: #fcf;
+            overflow: hidden;
+        }
+        #diagram {
+            position: absolute;
+            top: 10ex;
+            bottom: 0px;
+            right: 0px;
+            width: 80%;
+            background-color: #fff;
+            overflow: auto;
+        }
+        .padding {
+            padding: 20px;
+        }
+        .foreign {
+            color: #aaa;
+        }
+        .param {
+            padding: 15px 0px 8px 0px;
+        }
+        .param span {
+            padding-right: 15px;
+        }
+    script.
+        $(document).ready(function() {
+            var edge_length = 1
+            function moduleName() {
+                return $(this).parent().parent().children().first().text()
+            }
+            function diagramParam() {
+                function checkedModules(className) {
+                    return $('.'+className+':checked').map(moduleName).get()
+                }
+                return {
+                    indep: checkedModules('indep'),
+                    outdep: checkedModules('outdep'),
+                    ignore: checkedModules('ignore'),
+                    visualizer: $('#visualizer').val(),
+                    edge_length: edge_length,
+                    indirect: $('#indirect').prop('checked'),
+                    detailed: $('#detailed').prop('checked'),
+                }
+            }
+            function loadDiagram() {
+                var p = diagramParam()
+                var h = $('#header')
+                h.html(
+                    'indep: ' + p.indep.join(' ') +
+                    '<br/>outdep: ' + p.outdep.join(' ') +
+                    '<br/>ignore: ' + p.ignore.join(' ')
+                    )
+                $.get('/diagram', p)
+                    .done(function(url) {
+                        $('#diagramImage').attr('src', url)
+                    })
+                    .fail(function(xhr, text) {
+                        h.append('<br/>Failed to get diagram url: ' + (xhr.statusText || text) + ' (' + xhr.status + ')')
+                    })
+            }
+            $('.outdep, .indep, .ignore, #indirect, #detailed').click(loadDiagram)
+
+            function checkAll(className, checked) {
+                $('.'+className).prop('checked', checked)
+                loadDiagram()
+            }
+            $('.outdep_all').click(checkAll.bind(null, 'outdep', true))
+            $('.outdep_none').click(checkAll.bind(null, 'outdep', false))
+            $('.indep_all').click(checkAll.bind(null, 'indep', true))
+            $('.indep_none').click(checkAll.bind(null, 'indep', false))
+            $('.ignore_all').click(checkAll.bind(null, 'ignore', true))
+            $('.ignore_none').click(checkAll.bind(null, 'ignore', false))
+
+            $('#visualizer').change(loadDiagram)
+            $('#edge_length').slider({
+                value:1,
+                min: 1,
+                max: 5,
+                step: 0.5,
+                slide: function(event, ui) {
+                    edge_length = ui.value
+                    loadDiagram()
+                }
+            })
+        })
+    if req.buildInfo.data
+        #param
+            .padding
+                div
+                    span Visualizer
+                    select#visualizer(selected='dot')
+                        option(value='dot') dot
+                        option(value='neato') neato
+                        option(value='fdp') fdp
+                        option(value='sfdp') sfdp
+                        option(value='twopi') twopi
+                        option(value='circo') circo
+                div
+                    .param Edge length / rank separation
+                    #edge_length
+                .param
+                    input#indirect(type='checkbox')
+                    span Indirect
+                    input#detailed(type='checkbox')
+                    span Detailed
+        #modules
+            .padding
+                table
+                    tr
+                        th module
+                        th ->
+                        th <-
+                        th x
+                    tr
+                        th all
+                        td
+                            input.outdep_all(type='button')
+                        td
+                            input.indep_all(type='button')
+                        td
+                            input.ignore_all(type='button')
+                    tr
+                        th none
+                        td
+                            input.outdep_none(type='button')
+                        td
+                            input.indep_none(type='button')
+                        td
+                            input.ignore_none(type='button')
+                    each module in req.buildInfo.data.sortedModules
+                        tr
+                            td(class=!module.built?'foreign':'')= module.name
+                            td
+                                input.outdep(type='checkbox')
+                            td
+                                input.indep(type='checkbox')
+                            td
+                                input.ignore(type='checkbox')
+        #header
+            h1 Select modules to show diagram for
+        #diagram
+            .padding
+                img#diagramImage(src='images/question.png')
+    else
+        h1 Build dependency analyzer
+        h2 Build directory: #{req.buildInfo.builddir}
+        p Wait till the data is generated (then reload page)
