@@ -14,4 +14,6 @@ TODO: more text here
 
 ## Usage
 * ```BUILDDIR=/path/to/build/directory/ SRCDIR=/path/to/source/directory/ node bin/www```
+* Open a Web browser and go to address http://localhost:3000.
+
 
