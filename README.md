@@ -13,5 +13,5 @@ TODO: more text here
   ```sudo apt-get install graphviz```
 
 ## Usage
-* ```BUILDDIR=/path/to/build/directory/ SRCDIR=/path/to/source/directory/ node bin/www
+* ```BUILDDIR=/path/to/build/directory/ SRCDIR=/path/to/source/directory/ node bin/www```
 
