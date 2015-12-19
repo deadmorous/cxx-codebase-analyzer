@@ -22,6 +22,14 @@ TODO: more text here
   </pre>
 
 ## Usage
+* Make a clean build of your source code and generate the build log, ```buildlog.txt``` containing all g++ invocation commands.
+  For example, in CMake-based builds this can be done as follows:
+  <pre>
+  cd path/to/build/directory/
+  cmake path/to/source/directory/
+  make clean
+  make VERBOSE=ON |tee buildlog.txt
+  </pre>
 * Optionally choose TCP port number N (defaults to 3000)
 * Start web server
   <pre>
