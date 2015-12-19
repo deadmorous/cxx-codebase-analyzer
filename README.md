@@ -22,7 +22,7 @@ TODO: more text here
   </pre>
 
 ## Usage
-* Make a clean build of your source code and generate the build log, ```buildlog.txt``` containing all g++ invocation commands.
+* Make a clean build of your source code and generate the build log, ```buildlog.txt```, containing all g++ invocation commands.
   For example, in CMake-based builds this can be done as follows:
   <pre>
   cd path/to/build/directory/
