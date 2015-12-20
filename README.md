@@ -13,7 +13,7 @@ TODO: more text here
   </pre>
 * Clone this repository:
   <pre>
-  $ git@github.com:deadmorous/cxx-codebase-analyzer.git
+  $ git clone git@github.com:deadmorous/cxx-codebase-analyzer.git
   </pre>
 * Download third-party components:
   <pre>
