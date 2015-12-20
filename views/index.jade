@@ -1,23 +1,36 @@
 extends layout
 
+block vars
+    - var title = 'Header file dependency analyzer'
+
 block content
     style.
         #param {
             position: absolute;
             top: 0px;
-            height: 180px;
+            height: 140px;
             left: 0px;
             width: 20%;
-            background-color: #ccf;
-            overflow: auto;
+            background-color: #eee;
+            overflow: hidden;
+            border-radius: 0px 0px 10px 10px;
+        }
+        #filter {
+            position: absolute;
+            top: 140px;
+            height: 65px;
+            left: 0px;
+            width: 20%;
+            background-color: #ddd;
+            overflow: hidden;
+            border-radius: 10px;
         }
         #modules {
             position: absolute;
-            top: 180px;
+            top: 205px;
             bottom: 0px;
             left: 0px;
             width: 20%;
-            background-color: #cfc;
             overflow: auto;
         }
         #header {
@@ -26,7 +39,7 @@ block content
             height: 10ex;
             right: 0px;
             width: 80%;
-            background-color: #fcf;
+            background-color: #eee;
             overflow: hidden;
         }
         #diagram {
@@ -38,18 +51,70 @@ block content
             background-color: #fff;
             overflow: auto;
         }
+        .padding-h {
+            padding-left: 20px;
+            padding-right: 20px;
+        }
         .padding {
             padding: 20px;
         }
-        .foreign {
+        .foreign td:nth-child(1) {
             color: #aaa;
         }
         .param {
-            padding: 15px 0px 8px 0px;
+            padding: 10px 0px 8px 0px;
         }
         .param span {
             padding-right: 15px;
         }
+
+
+        .fixed-table-container-inner {
+          overflow-x: hidden;
+          overflow-y: auto;
+          height: 100%;
+        }
+
+        .header-background {
+          background-color: #eee;
+          height: 77px; /* height of header */
+          position: absolute;
+          top: 0;
+          right: 17px;
+          left: 0;
+          box-shadow: 0px 5px 12px 0px #ccc;
+          border-radius: 0px 0px 10px 0px;
+        }
+
+        #modules table {
+          background-color: white;
+          width: 100%;
+          overflow-x: hidden;
+          overflow-y: auto;
+          border-collapse: collapse;
+        }
+
+        .th-inner {
+          position: absolute;
+          top: 0;
+        }
+        th:nth-child(1) .th-inner {
+          text-align: right;
+        }
+        .th-content {
+            height: 75px;
+        }
+        .th-inner div {
+            height: 25px;
+        }
+        .tr-odd {
+            background-color: #eee;
+        }
+
+        .bad-text-input {
+            background-color: #fcc;
+        }
+
     script.
         $(document).ready(function() {
             var edge_length = 1
@@ -86,10 +151,22 @@ block content
                         h.append('<br/>Failed to get diagram url: ' + (xhr.statusText || text) + ' (' + xhr.status + ')')
                     })
             }
-            $('.outdep, .indep, .ignore, #indirect, #detailed').click(loadDiagram)
+            function moduleCheckboxChanged() {
+                var o = $(this)
+                if (!o.hasClass('ignore'))
+                    o.parent().parent().find('.ignore').prop('checked', false)
+                loadDiagram()
+            }
+            $('.internal, .outdep, .indep, .ignore').click(moduleCheckboxChanged)
+            $('#indirect, #detailed').click(loadDiagram)
 
             function checkAll(className, checked) {
-                $('.'+className).prop('checked', checked)
+                $('.'+className+':visible').each(function() {
+                    var o = $(this)
+                    var cancel = checked && !o.prop('checked') && o.parent().parent().find('.ignore').prop('checked')
+                    if (!cancel)
+                        o.prop('checked', checked)
+                })
                 loadDiagram()
             }
             $('.outdep_all').click(checkAll.bind(null, 'outdep', true))
@@ -110,6 +187,49 @@ block content
                     loadDiagram()
                 }
             })
+
+            function styleModuleRows() {
+                $('#modules tbody tr:visible:odd').addClass('tr-odd')
+                $('#modules tbody tr:visible:even').removeClass('tr-odd')
+            }
+            styleModuleRows()
+
+            /*
+            function filterModules(show) {
+                var tbl = $('#modules tbody')
+                if (show) {
+                    tbl.children(show).show('fast')
+                    tbl.children(':not('+show+')').hide('fast')
+                    tbl.children().promise().done(styleModuleRows)
+                }
+                else
+                    tbl.children().show('fast').promise().done(styleModuleRows)
+            }
+            */
+            function filterModules() {
+                try {
+                    var filterText = new RegExp($('#filter-name').val())
+                    }
+                catch(err) {
+                    $('#filter-name').addClass('bad-text-input')
+                    return
+                }
+                $('#filter-name').removeClass('bad-text-input')
+                var filterSel = $("input:radio[name='filter']:checked").val()
+                var all = $('#modules tbody').children(),   show = [],   hide = []
+                all.each(function() {
+                    var o = $(this)
+                    var coll = (!filterSel || o.is(filterSel)) && o.children().first().text().match(filterText)? show: hide
+                    coll.push(this)
+                })
+                $(show).show('fast')
+                $(hide).hide('fast')
+                all.promise().done(styleModuleRows)
+            }
+
+            $('.filter-option').click(filterModules)
+            $('#filter-name').on('input', filterModules)
+
         })
     if req.buildInfo.data
         #param
@@ -131,39 +251,75 @@ block content
                     span Indirect
                     input#detailed(type='checkbox')
                     span Detailed
+        #filter
+            .padding-h
+                .param
+                    input.filter-option(type='radio' name='filter' value='' checked)
+                    span All
+                    input.filter-option(type='radio' name='filter' value=':not(.foreign)')
+                    span Built
+                    input.filter-option(type='radio' name='filter' value='.foreign')
+                    span Not built
+                    input.filter-option(type='radio' name='filter' value='.current')
+                    span Current
+                    br
+                    span Name
+                    input#filter-name(type='text')
         #modules
-            .padding
+            //-
+                Note: Fixed table header implementation is based on this:
+                http://salzerdesign.com/test/fixedTable.html
+            .header-background
+            .fixed-table-container-inner
                 table
-                    tr
-                        th module
-                        th ->
-                        th <-
-                        th x
-                    tr
-                        th all
-                        td
-                            input.outdep_all(type='button')
-                        td
-                            input.indep_all(type='button')
-                        td
-                            input.ignore_all(type='button')
-                    tr
-                        th none
-                        td
-                            input.outdep_none(type='button')
-                        td
-                            input.indep_none(type='button')
-                        td
-                            input.ignore_none(type='button')
-                    each module in req.buildInfo.data.sortedModules
+                    thead
                         tr
-                            td(class=!module.built?'foreign':'')= module.name
-                            td
-                                input.outdep(type='checkbox')
-                            td
-                                input.indep(type='checkbox')
-                            td
-                                input.ignore(type='checkbox')
+                            th
+                                .th-content
+                                .th-inner
+                                    div module
+                                    div all
+                                    div none
+                            th
+                                .th-inner
+                                    div o
+                                    div
+                                        input.internal_all(type='button')
+                                    div
+                                        input.internal_none(type='button')
+                            th
+                                .th-inner
+                                    div ->
+                                    div
+                                        input.outdep_all(type='button')
+                                    div
+                                        input.outdep_none(type='button')
+                            th
+                                .th-inner
+                                    div <-
+                                    div
+                                        input.indep_all(type='button')
+                                    div
+                                        input.indep_none(type='button')
+                            th
+                                .th-inner
+                                    div x
+                                    div
+                                        input.ignore_all(type='button')
+                                    div
+                                        input.ignore_none(type='button')
+                    tbody
+                        each module in req.buildInfo.data.sortedModules
+                            tr(class=!module.built?'foreign':'')
+                                td= module.name
+                                td
+                                    input.internal(type='checkbox')
+                                td
+                                    input.outdep(type='checkbox')
+                                td
+                                    input.indep(type='checkbox')
+                                td
+                                    input.ignore(type='checkbox')
         #header
             h1 Select modules to show diagram for
         #diagram
