@@ -15,7 +15,6 @@ function dict(stringArray) {
 }
 
 var knownDiagrams = {}
-var reparseCount = 1
 var validVisualizers = {
     dot: 1,
     neato: 1,
@@ -144,12 +143,12 @@ module.exports = function(req, res, next) {
     var visualizer = validVisualizers[q.visualizer]? q.visualizer: 'dot'
     var edge_length = q.edge_length || 1
 
-    var fileName = visualizer + '-diagram-' + md5(JSON.stringify(q)) + '-' + reparseCount + '.svg'
-    var url = '/tmp/' + fileName
-
     var data = req.buildInfo.data
     if (!data)
         return res.status(412).send('Build information is not available')
+
+    var fileName = visualizer + '-diagram-' + md5(JSON.stringify(q)) + '-' + data.scanNumber + '.svg'
+    var url = '/tmp/' + fileName
 
     var allModuleInfo = {}
     function moduleInfo(moduleName) {

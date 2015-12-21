@@ -132,6 +132,33 @@ block content
             background-image: url('/images/bullet_green.png');
         }
 
+        #progress-overlay {
+            background-color: #012;
+            position: fixed;
+            top: 0; right: 0; bottom: 0; left: 0;
+            opacity: 0.5;
+            z-index: 10;
+        }
+        .ui-progressbar {
+            position: absolute;
+            top: 30%;
+            right: 15%;
+            left: 15%;
+        }
+        .progress-label {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 4px;
+            font-weight: bold;
+            text-shadow: 1px 1px 0 #fff;
+            text-align: center;
+        }
+        #rescan {
+            float: right;
+            color: #c00;
+        }
+
         /* see http://stackoverflow.com/questions/6258521/clear-icon-inside-input-text */
         .clearable{
             background-image: url('/images/close_search.png');
@@ -198,7 +225,6 @@ block content
                     o.parent().parent().find('.ignore').prop('checked', false)
                 loadDiagram()
             }
-            $('.internal, .outdep, .indep, .ignore').click(moduleCheckboxChanged)
             $('#indirect, #detailed').click(loadDiagram)
 
             function checkAll(className, checked) {
@@ -266,116 +292,183 @@ block content
             $('.filter-option').click(filterModules)
             $('#filter-name').on('input', filterModules)
 
+            ;(function() {
+                var progressOverlay = $('#progress-overlay')
+                var progressbar = $('#progressbar')
+                var progressLabel = $('.progress-label')
+
+                function applySavedParam(savedParam) {
+                    function dict(arr) {
+                        var result = {}
+                        for (var i=0, n=arr.length; i<n; ++i)
+                            result[arr[i]] = 1
+                        return result
+                    }
+                    var d = {
+                        indep: dict(savedParam.indep),
+                        outdep: dict(savedParam.outdep),
+                        ignore: dict(savedParam.ignore),
+                        internal: dict(savedParam.internal)
+                    }
+                    function applyToModule($tr, moduleName, className) {
+                        if (d[className][moduleName])
+                            $tr.find('.'+className).prop('checked', true)
+                    }
+                    $('#modules tbody').children().each(function() {
+                        var $tr = $(this)
+                        var moduleName = $tr.children().first().text()
+                        for (className in d)
+                            applyToModule($tr, moduleName, className)
+                    })
+                    loadDiagram()
+                }
+
+                function scanningError(xhr, text) {
+                    progressLabel.text((xhr.statusText || text) + ' (' + xhr.status + ')')
+                }
+
+                progressbar.progressbar({
+                    value: 0,
+                    change: function() {
+                        progressLabel.text( progressbar.progressbar('value') + "%" )
+                    },
+                    complete: function() {
+                        $.get('/modules')
+                            .done(function(html) {
+                                var savedParam = diagramParam()
+                                $('#modules tbody').html(html)
+                                $('.internal, .outdep, .indep, .ignore').click(moduleCheckboxChanged)
+                                applySavedParam(savedParam)
+                                progressOverlay.hide()
+                            })
+                            .fail(scanningError)
+                    }
+                })
+
+                function updateProgress() {
+                    $.get('/status')
+                        .done(function(data) {
+                            if (data.status === 'ready')
+                                progressbar.progressbar('value', 100)
+                            else {
+                                var value = Math.floor(data.progress * 100)
+                                if (value >= 100)
+                                    value = 99
+                                progressbar.progressbar('value', value)
+                                setTimeout(updateProgress, 600)
+                            }
+                        })
+                        .fail(scanningError)
+                }
+                updateProgress()
+
+                $('#rescan').click(function() {
+                    progressOverlay.show()
+                    $.get('/rescan')
+                        .done(updateProgress)
+                        .fail(scanningError)
+                })
+            })()
+
             // CLEARABLE INPUT
             // see http://stackoverflow.com/questions/6258521/clear-icon-inside-input-text
             ;(function() {
-                function tog(v){return v?'addClass':'removeClass';}
+                function tog(v){return v?'addClass':'removeClass'}
                 $(document).on('input', '.clearable', function(){
-                    $(this)[tog(this.value)]('x');
+                    $(this)[tog(this.value)]('x')
                 }).on('mousemove', '.x', function( e ){
-                    $(this)[tog(this.offsetWidth-18 < e.clientX-this.getBoundingClientRect().left)]('onX');
+                    $(this)[tog(this.offsetWidth-18 < e.clientX-this.getBoundingClientRect().left)]('onX')
                 }).on('touchstart click', '.onX', function( ev ){
-                    ev.preventDefault();
-                    $(this).removeClass('x onX').val('').change();
+                    ev.preventDefault()
+                    $(this).removeClass('x onX').val('').change()
                     filterModules()
-                });
+                })
             })()
         })
-    if req.buildInfo.data
-        #param
-            .padding
-                div
-                    span Visualizer
-                    select#visualizer(selected='dot')
-                        option(value='dot') dot
-                        option(value='neato') neato
-                        option(value='fdp') fdp
-                        option(value='sfdp') sfdp
-                        option(value='twopi') twopi
-                        option(value='circo') circo
-                div
-                    .param Edge length / rank separation
-                    #edge_length
-                .param
-                    input#indirect(type='checkbox')
-                    span Indirect
-                    input#detailed(type='checkbox')
-                    span Detailed
-        #filter
-            .padding-h
-                .param
-                    input.filter-option(type='radio' name='filter' value='' checked)
-                    span All
-                    input.filter-option(type='radio' name='filter' value=':not(.foreign)')
-                    span Built
-                    input.filter-option(type='radio' name='filter' value='.foreign')
-                    span Not built
-                    input.filter-option(type='radio' name='filter' value='.current')
-                    span Current
-                    br
-                    span Name
-                    input.clearable#filter-name(type='text' placeholder='regex pattern')
-        #modules
-            //-
-                Note: Fixed table header implementation is based on this:
-                http://salzerdesign.com/test/fixedTable.html
-            .header-background
-            .fixed-table-container-inner
-                table
-                    thead
-                        tr
-                            th
-                                .th-content
-                                .th-inner
-                                    div module
-                                    div all
-                                    div none
-                            th
-                                .th-inner
-                                    div o
-                                    div
-                                        input.internal_all(type='button')
-                                    div
-                                        input.internal_none(type='button')
-                            th
-                                .th-inner
-                                    div ->
-                                    div
-                                        input.outdep_all(type='button')
-                                    div
-                                        input.outdep_none(type='button')
-                            th
-                                .th-inner
-                                    div <-
-                                    div
-                                        input.indep_all(type='button')
-                                    div
-                                        input.indep_none(type='button')
-                            th
-                                .th-inner
-                                    div x
-                                    div
-                                        input.ignore_all(type='button')
-                                    div
-                                        input.ignore_none(type='button')
-                    tbody
-                        each module in req.buildInfo.data.sortedModules
-                            tr(class=!module.built?'foreign':'')
-                                td.modulename= module.name
-                                td
-                                    input.internal(type='checkbox')
-                                td
-                                    input.outdep(type='checkbox')
-                                td
-                                    input.indep(type='checkbox')
-                                td
-                                    input.ignore(type='checkbox')
-        #header
-            h1 Select modules to show diagram for
-        #diagram
-            .padding
-                img#diagramImage(src='images/question.png')
-    else
-        h1 Build dependency analyzer
-        h2 Build directory: #{req.buildInfo.builddir}
-        p Wait till the data is generated (then reload page)
+    #param
+        .padding
+            div
+                span Visualizer
+                select#visualizer(selected='dot')
+                    option(value='dot') dot
+                    option(value='neato') neato
+                    option(value='fdp') fdp
+                    option(value='sfdp') sfdp
+                    option(value='twopi') twopi
+                    option(value='circo') circo
+                input#rescan(type='button' value='rescan')
+            div
+                .param Edge length / rank separation
+                #edge_length
+            .param
+                input#indirect(type='checkbox')
+                span Indirect
+                input#detailed(type='checkbox')
+                span Detailed
+    #filter
+        .padding-h
+            .param
+                input.filter-option(type='radio' name='filter' value='' checked)
+                span All
+                input.filter-option(type='radio' name='filter' value=':not(.foreign)')
+                span Built
+                input.filter-option(type='radio' name='filter' value='.foreign')
+                span Not built
+                input.filter-option(type='radio' name='filter' value='.current')
+                span Current
+                br
+                span Name
+                input.clearable#filter-name(type='text' placeholder='regex pattern')
+    #modules
+        //-
+            Note: Fixed table header implementation is based on this:
+            http://salzerdesign.com/test/fixedTable.html
+        .header-background
+        .fixed-table-container-inner
+            table
+                thead
+                    tr
+                        th
+                            .th-content
+                            .th-inner
+                                div module
+                                div all
+                                div none
+                        th
+                            .th-inner
+                                div o
+                                div
+                                    input.internal_all(type='button')
+                                div
+                                    input.internal_none(type='button')
+                        th
+                            .th-inner
+                                div ->
+                                div
+                                    input.outdep_all(type='button')
+                                div
+                                    input.outdep_none(type='button')
+                        th
+                            .th-inner
+                                div <-
+                                div
+                                    input.indep_all(type='button')
+                                div
+                                    input.indep_none(type='button')
+                        th
+                            .th-inner
+                                div x
+                                div
+                                    input.ignore_all(type='button')
+                                div
+                                    input.ignore_none(type='button')
+                tbody
+    #header
+        h1 Select modules to show diagram for
+        h2 Build directory: #{req.buildInfo.options.buildPath}
+    #diagram
+        .padding
+            img#diagramImage(src='images/question.png')
+    #progress-overlay
+        #progressbar
+            .progress-label Scanning dependencies...

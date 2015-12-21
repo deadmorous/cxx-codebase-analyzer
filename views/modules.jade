@@ -1,0 +1,12 @@
+if req.buildInfo.data
+    each module in req.buildInfo.data.sortedModules
+        tr(class=!module.built?'foreign':'')
+            td.modulename= module.name
+            td
+                input.internal(type='checkbox')
+            td
+                input.outdep(type='checkbox')
+            td
+                input.indep(type='checkbox')
+            td
+                input.ignore(type='checkbox')

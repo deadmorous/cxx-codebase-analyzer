@@ -386,6 +386,8 @@ function extractIncludeDependencies(data, cb)
     )
 }
 
+var scanNumber = 0
+
 function removeDummyModules(data, cb) {
     // Remove modules that have no source files and no header files
     data.modules = _.pick(data.modules, function(module) {
@@ -393,6 +395,7 @@ function removeDummyModules(data, cb) {
             _.isEmpty(module.sourceFiles)   &&
             _.isEmpty(module.headerFiles))
     })
+    data.scanNumber = ++scanNumber
     cb(null, data)
 }
 
