@@ -154,8 +154,10 @@ block content
             text-shadow: 1px 1px 0 #fff;
             text-align: center;
         }
-        #rescan {
+        #rescan, #buildInfo {
             float: right;
+        }
+        #rescan {
             color: #c00;
         }
 
@@ -363,12 +365,17 @@ block content
                 updateProgress()
 
                 $('#rescan').click(function() {
+                    progressbar.progressbar('value', 0)
                     progressOverlay.show()
                     $.get('/rescan')
                         .done(updateProgress)
                         .fail(scanningError)
                 })
             })()
+
+            $('#buildInfo').click(function() {
+                $('#header').html($('#basicBuildInfo').html())
+            })
 
             // CLEARABLE INPUT
             // see http://stackoverflow.com/questions/6258521/clear-icon-inside-input-text
@@ -396,6 +403,7 @@ block content
                     option(value='sfdp') sfdp
                     option(value='twopi') twopi
                     option(value='circo') circo
+                input#buildInfo(type='button' value='?')
                 input#rescan(type='button' value='rescan')
             div
                 .param Edge length / rank separation
@@ -464,6 +472,7 @@ block content
                                     input.ignore_none(type='button')
                 tbody
     #header
+    #basicBuildInfo(style='display:none;')
         h1 Select modules to show diagram for
         h2 Build directory: #{req.buildInfo.options.buildPath}
     #diagram

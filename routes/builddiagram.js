@@ -147,7 +147,7 @@ module.exports = function(req, res, next) {
     if (!data)
         return res.status(412).send('Build information is not available')
 
-    var fileName = visualizer + '-diagram-' + md5(JSON.stringify(q)) + '-' + data.scanNumber + '.svg'
+    var fileName = visualizer + '-diagram-' + md5(JSON.stringify(q) + data.scanDate) + '.svg'
     var url = '/tmp/' + fileName
 
     var allModuleInfo = {}
