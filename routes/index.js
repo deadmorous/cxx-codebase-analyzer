@@ -1,6 +1,7 @@
 var express = require('express')
 var router = express.Router()
 var buildDiagram = require('./builddiagram.js')
+var projdep = require('./projdep.js')
 
 /* GET home page. */
 router
@@ -9,5 +10,8 @@ router
         res.render('index', { req: req });
     })
     .get('/diagram', buildDiagram)
+    .get('/status', function(req, res, next) {
+        res.send(projdep.status())
+    })
 
 module.exports = router;

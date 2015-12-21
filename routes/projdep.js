@@ -9,6 +9,73 @@ function escapeForRegExp(str) {
     return str.replace(/([\\/.+*^$])/g, '\\$1')
 }
 
+function clean(collection) {
+    _.each(collection, _.method('clean'))
+}
+
+var runningStatus
+;(function() {
+
+function RunningStatusData(options) {
+    _.extend(this, {
+        status: 'ready',
+        progress: 1
+    })
+    if (options)
+        _.extend(this, options)
+}
+
+var runningStatusData = new RunningStatusData()
+var sourceFilesTotal
+var sourceFilesProcessed
+
+runningStatus = function() {
+    return runningStatusData
+}
+
+runningStatus.start = function()
+{
+    runningStatusData = new RunningStatusData({
+        status: 'reading',
+        progress: 0
+    })
+}
+
+runningStatus.announceSourceFiles = function(data)
+{
+    sourceFilesTotal = _.size(data.sourceFiles)
+    sourceFilesProcessed = 0
+    runningStatusData = new RunningStatusData({
+        status: 'extracting',
+        progress: 0
+    })
+}
+
+runningStatus.sourceFileProcessed = function()
+{
+    if (++sourceFilesProcessed === sourceFilesTotal) {
+        runningStatusData = new RunningStatusData({
+            status: 'processing',
+            progress: 1
+        })
+    }
+    else
+        runningStatusData.progress = sourceFilesProcessed / sourceFilesTotal
+}
+
+runningStatus.finished = function(err) {
+    if (err)
+        runningStatusData = new RunningStatusData({
+            status: 'failed',
+            progress: 1,
+            error: err
+        })
+    else
+        runningStatusData = new RunningStatusData()
+}
+
+})()
+
 function Data(options) {
     this.options = options
     this.modules = {}
@@ -81,6 +148,13 @@ Data.prototype.addLink = function(sourceFile, fromPath, toPath) {
     to.addIncludedFrom(from, sourceFile)
 }
 
+// Prepare for re-scanning include dependencies
+Data.prototype.clean = function() {
+    clean(this.modules)
+    clean(this.sourceFiles)
+    this.headerFiles = {}
+}
+
 
 
 function Module(options) {
@@ -88,6 +162,11 @@ function Module(options) {
     this.headerFiles = []
     if (options)
         _.extend(this, options)
+}
+
+// Prepare for re-scanning include dependencies
+Module.prototype.clean = function() {
+    this.headerFiles = []
 }
 
 
@@ -108,6 +187,11 @@ SourceFile.prototype.includes = function() {
 }
 SourceFile.prototype.addInclude = function(headerFile) {
     this.links[headerFile.path] = headerFile
+}
+
+// Prepare for re-scanning include dependencies
+SourceFile.prototype.clean = function() {
+    this.links = {}
 }
 
 
@@ -144,10 +228,17 @@ HeaderFile.prototype.addIncludedFrom = function(file, sourceFile) {
     links[file.path] = file
 }
 
+// Prepare for re-scanning include dependencies
+HeaderFile.prototype.clean = function() {
+    this.links = {}
+    this.backLinks = {}
+}
+
 
 
 function parseBuildLog(options, cb)
 {
+    runningStatus.start()
     options = options || {}
     if (!(options.ignoreSourceFilePath instanceof Function))
         options.ignoreSourceFilePath = function() {}
@@ -250,9 +341,11 @@ function parseBuildLog(options, cb)
 
 function extractIncludeDependencies(data, cb)
 {
+    runningStatus.announceSourceFiles(data)
     function extractSourceDependencies(sourceFile, cb)
     {
         child_process.exec(sourceFile.cmd, {encoding: 'utf8'}, function (error, stdout, stderr) {
+            runningStatus.sourceFileProcessed()
             if (error)
                 return cb(error)
             var done = false
@@ -313,8 +406,49 @@ function reportDone(data, cb) {
     cb(null, data)
 }
 
+makeBuildDependencies.readBuildLogFile = function(options, cb)
+{
+    if (runningStatus().status !== 'ready')
+        return cb(new Error('Dependency generator is busy'))
+    parseBuildLog(options, function(err, data) {
+        if (err) {
+            console.log(err)
+            return cb(err)
+        }
+        else {
+            console.log('Build log file has been read')
+            return cb(null, data)
+        }
+    })
+}
+
+makeBuildDependencies.makeDependencies = function(data, cb)
+{
+    if (runningStatus().status !== 'ready')
+        return cb(new Error('Dependency generator is busy'))
+
+    // Prepare for re-scanning include dependencies
+    data.clean()
+
+    // Scan dependencies
+    async.waterfall([
+                        extractIncludeDependencies.bind(null, data),
+                        removeDummyModules,
+                        sortModules,
+                        reportDone
+                    ],
+                    function(err, data) {
+                        runningStatus.finished(err)
+                        cb(err, data)
+                    })
+}
+
+makeBuildDependencies.status = runningStatus
+
 function makeBuildDependencies(options, cb)
 {
+    if (runningStatus().status !== 'ready')
+        return cb(new Error('Dependency generator is busy'))
     async.waterfall([
                         parseBuildLog.bind(null, options),
                         extractIncludeDependencies,
@@ -322,16 +456,10 @@ function makeBuildDependencies(options, cb)
                         sortModules,
                         reportDone
                     ],
-                    cb)
+                    function(err, data) {
+                        runningStatus.finished(err)
+                        cb(err, data)
+                    })
 }
-
-/* TODO: Remove
-_.extend(makeBuildDependencies, {
-    Data: Data,
-    Module: Module,
-    SourceFile: SourceFile,
-    HeaderFile: HeaderFile
-})
-*/
 
 module.exports = makeBuildDependencies
