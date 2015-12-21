@@ -1,5 +1,5 @@
 *~
-public/jquery-*
+public/jquery*
 tmp/
 node_modules/
 

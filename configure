@@ -13,9 +13,12 @@ function doorexit {
 
 doorexit mkdir -p $dir/tmp
 doorexit mkdir -p $dir/public
+
 doorexit wget -P $dir/public http://code.jquery.com/jquery-1.11.3.min.js
+
 doorexit wget -P $dir/tmp http://jqueryui.com/resources/download/jquery-ui-1.11.4.zip
 doorexit unzip -d $dir/public $dir/tmp/jquery-ui-1.11.4.zip
+
 doorexit rm $dir/tmp/jquery-ui-1.11.4.zip
 doorexit npm install
 

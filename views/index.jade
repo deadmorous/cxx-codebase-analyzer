@@ -3,6 +3,12 @@ extends layout
 block vars
     - var title = 'Header file dependency analyzer'
 
+block stylesAndScripts
+    link(rel='stylesheet', href='/css/style.css')
+    link(rel='stylesheet', href='/jquery-ui-1.11.4/jquery-ui.min.css')
+    script(type='text/javascript' src='/jquery-1.11.3.min.js')
+    script(type='text/javascript' src='/jquery-ui-1.11.4/jquery-ui.min.js')
+
 block content
     style.
         #param {
@@ -115,6 +121,19 @@ block content
             background-color: #fcc;
         }
 
+        /* see http://stackoverflow.com/questions/6258521/clear-icon-inside-input-text */
+        .clearable{
+            background-image: url('/images/close-search.png');
+            background-repeat: no-repeat;
+            background-position: right -10px center;
+            border: 1px solid #999;
+            padding: 3px 18px 3px 4px;     /* Use the same right padding (18) in jQ! */
+            border-radius: 3px;
+            transition: background 0.4s;
+        }
+        .clearable.x  { background-position: right 5px center; } /* (jQ) Show icon */
+        .clearable.onX{ cursor: pointer; }              /* (jQ) hover cursor style */
+        .clearable::-ms-clear {display: none; width:0; height:0;} /* Remove IE default X */
     script.
         $(document).ready(function() {
             var edge_length = 1
@@ -129,6 +148,7 @@ block content
                     indep: checkedModules('indep'),
                     outdep: checkedModules('outdep'),
                     ignore: checkedModules('ignore'),
+                    internal: checkedModules('internal'),
                     visualizer: $('#visualizer').val(),
                     edge_length: edge_length,
                     indirect: $('#indirect').prop('checked'),
@@ -141,7 +161,8 @@ block content
                 h.html(
                     'indep: ' + p.indep.join(' ') +
                     '<br/>outdep: ' + p.outdep.join(' ') +
-                    '<br/>ignore: ' + p.ignore.join(' ')
+                    '<br/>ignore: ' + p.ignore.join(' ') +
+                    '<br/>internal: ' + p.internal.join(' ')
                     )
                 $.get('/diagram', p)
                     .done(function(url) {
@@ -163,7 +184,12 @@ block content
             function checkAll(className, checked) {
                 $('.'+className+':visible').each(function() {
                     var o = $(this)
-                    var cancel = checked && !o.prop('checked') && o.parent().parent().find('.ignore').prop('checked')
+                    var row = o.parent().parent()
+                    var cancel = checked && !o.prop('checked')
+                    if (className === 'ignore')
+                        cancel = cancel && row.find(':not(.ignore):checked').length > 0
+                    else
+                        cancel = cancel && row.find('.ignore:checked').length > 0
                     if (!cancel)
                         o.prop('checked', checked)
                 })
@@ -175,6 +201,8 @@ block content
             $('.indep_none').click(checkAll.bind(null, 'indep', false))
             $('.ignore_all').click(checkAll.bind(null, 'ignore', true))
             $('.ignore_none').click(checkAll.bind(null, 'ignore', false))
+            $('.internal_all').click(checkAll.bind(null, 'internal', true))
+            $('.internal_none').click(checkAll.bind(null, 'internal', false))
 
             $('#visualizer').change(loadDiagram)
             $('#edge_length').slider({
@@ -194,18 +222,6 @@ block content
             }
             styleModuleRows()
 
-            /*
-            function filterModules(show) {
-                var tbl = $('#modules tbody')
-                if (show) {
-                    tbl.children(show).show('fast')
-                    tbl.children(':not('+show+')').hide('fast')
-                    tbl.children().promise().done(styleModuleRows)
-                }
-                else
-                    tbl.children().show('fast').promise().done(styleModuleRows)
-            }
-            */
             function filterModules() {
                 try {
                     var filterText = new RegExp($('#filter-name').val())
@@ -230,6 +246,20 @@ block content
             $('.filter-option').click(filterModules)
             $('#filter-name').on('input', filterModules)
 
+            // CLEARABLE INPUT
+            // see http://stackoverflow.com/questions/6258521/clear-icon-inside-input-text
+            ;(function() {
+                function tog(v){return v?'addClass':'removeClass';}
+                $(document).on('input', '.clearable', function(){
+                    $(this)[tog(this.value)]('x');
+                }).on('mousemove', '.x', function( e ){
+                    $(this)[tog(this.offsetWidth-18 < e.clientX-this.getBoundingClientRect().left)]('onX');
+                }).on('touchstart click', '.onX', function( ev ){
+                    ev.preventDefault();
+                    $(this).removeClass('x onX').val('').change();
+                    filterModules()
+                });
+            })()
         })
     if req.buildInfo.data
         #param
@@ -264,7 +294,7 @@ block content
                     span Current
                     br
                     span Name
-                    input#filter-name(type='text')
+                    input.clearable#filter-name(type='text' placeholder='regex pattern')
         #modules
             //-
                 Note: Fixed table header implementation is based on this:

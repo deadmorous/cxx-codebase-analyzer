@@ -42,7 +42,6 @@ function addLink(links, from, to) {
 }
 
 makeLinks = function makeLinks(newLinks, newFiles, files, moduleInfo, allSourceFiles) {
-
     _.each(files, function(file) {
         var flags  = moduleFlags(moduleInfo, file.module.name)
         if (flags.ignore)
@@ -52,7 +51,9 @@ makeLinks = function makeLinks(newLinks, newFiles, files, moduleInfo, allSourceF
             if (!(fileSource.path in allSourceFiles))
                 return
             _.each(file.includes(fileSource), function(headerFile) {
-                if (!flags.internalLinks && headerFile.module === file.module)
+                if (!flags.internal && headerFile.module === file.module)
+                    return
+                if (!flags.outdep && headerFile.module !== file.module)
                     return
                 var flags2 = moduleFlags(moduleInfo, headerFile.module.name)
                 if (flags2.ignore)
@@ -72,7 +73,7 @@ makeLinksFrom = function makeLinksFrom(newLinks, newFiles, files, moduleInfo) {
         var fileSources = file.allSourceFiles()
         _.each(fileSources, function(fileSource) {
             _.each(file.includedFrom(fileSource), function(parentFile) {
-                if (!flags.internalLinks && parentFile.module === file.module)
+                if (!flags.internal && parentFile.module === file.module)
                     return
                 var flags2 = moduleFlags(moduleInfo, parentFile.module.name)
                 if (flags2.ignore)
@@ -97,7 +98,8 @@ module.exports = function(req, res, next) {
     q.indep = q.indep || []
     q.outdep = q.outdep || []
     q.ignore = q.ignore || []
-    if (!((q.indep instanceof Array) && (q.outdep instanceof Array) && (q.ignore instanceof Array)))
+    q.internal = q.internal || []
+    if (!((q.indep instanceof Array) && (q.outdep instanceof Array) && (q.ignore instanceof Array) && (q.internal instanceof Array)))
         return res.status(400).send(new Error('Diagram specification is invalid'))
     var visualizer = validVisualizers[q.visualizer]? q.visualizer: 'dot'
     var edge_length = q.edge_length || 1
@@ -113,9 +115,6 @@ module.exports = function(req, res, next) {
     var data = req.buildInfo.data
     if (!data)
         return res.status(412).send('Build information is not available')
-    var indep = dict(q.indep)
-    var outdep = dict(q.outdep)
-    var ignore = dict(q.ignore)
     var detailed = isTrue(q.detailed)
     var indirect = isTrue(q.indirect)
 
@@ -130,13 +129,13 @@ module.exports = function(req, res, next) {
             }
         return result
     }
-    // _.each(q.indep.concat(q.outdep), function(value) { moduleInfo(value) })
     _.each(q.indep, function(moduleName) { moduleInfo(moduleName).flags.indep = true })
     _.each(q.outdep, function(moduleName) { moduleInfo(moduleName).flags.outdep = true })
     _.each(q.ignore, function(moduleName) { moduleInfo(moduleName).flags.ignore = true })
+    _.each(q.internal, function(moduleName) { moduleInfo(moduleName).flags.internal = true })
 
     // Collect all source files
-    var allSourceFiles = _.reduce(q.outdep, function(acc, moduleName) {
+    var allSourceFiles = _.reduce(q.outdep.concat(q.internal), function(acc, moduleName) {
         var module = data.module(moduleName)
         if (!moduleInfo(moduleName).flags.ignore)
             _.each(module.sourceFiles, function(sourceFile) {
