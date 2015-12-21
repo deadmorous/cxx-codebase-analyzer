@@ -41,47 +41,87 @@ function addLink(links, from, to) {
     return true
 }
 
-makeLinks = function makeLinks(newLinks, newFiles, files, moduleInfo, allSourceFiles) {
-    _.each(files, function(file) {
-        var flags  = moduleFlags(moduleInfo, file.module.name)
-        if (flags.ignore)
+function traceDependencies(newLinks, moduleInfo, file, options, data) {
+    var flagsFrom = moduleFlags(moduleInfo, file.module.name)
+    if (flagsFrom.ignore)
+        return
+    options = options || {}
+    data = data || {
+        sourceFile: file,
+        allFiles: {}
+    }
+    if (data.allFiles[file.path])
+        return
+    data.allFiles[file.path] = file
+    var sourceFlags = moduleFlags(moduleInfo, data.sourceFile.module.name)
+    _.each(file.includes(data.sourceFile), function(headerFile) {
+        var flagsTo = moduleFlags(moduleInfo, headerFile.module.name)
+        if (flagsTo.ignore)
             return
-        var fileSources = file.allSourceFiles()
-        _.each(fileSources, function(fileSource) {
-            if (!(fileSource.path in allSourceFiles))
+        var gone = data.sourceFile.module !== file.module
+        var transit = gone && file.module !== headerFile.module
+        var inModule = data.sourceFile.module === headerFile.module
+        var needLink, needRecursion
+        if (inModule) {
+            needLink = sourceFlags.internal
+            needRecursion = sourceFlags.outdep || sourceFlags.internal
+        }
+        else if (transit)
+            needLink = needRecursion = options.indirect
+        else if (gone) {
+            needLink = false
+            needRecursion = options.indirect
+        }
+        else {
+            needLink = sourceFlags.outdep
+            needRecursion = sourceFlags.outdep && options.indirect
+        }
+        if (needLink)
+            addLink(newLinks, file, headerFile)
+        if (needRecursion)
+            traceDependencies(newLinks, moduleInfo, headerFile, options, data)
+    })
+}
+
+makeLinks = function makeLinks(newLinks, moduleInfo, allSourceFiles, options) {
+    _.each(allSourceFiles, function(sourceFile) {
+        traceDependencies(newLinks, moduleInfo, sourceFile, options)
+    })
+}
+
+function traceBackDependencies(newLinks, moduleInfo, file, options, data) {
+    var flagsTo = moduleFlags(moduleInfo, file.module.name)
+    if (flagsTo.ignore)
+        return
+    options = options || {}
+    data = data || {
+        allFiles: {},
+        originalFile: file
+    }
+    if (data.allFiles[file.path])
+        return
+    data.allFiles[file.path] = file
+    _.each(file.allSourceFiles(), function(fileSource) {
+        _.each(file.includedFrom(fileSource), function(parentFile) {
+            var flagsFrom = moduleFlags(moduleInfo, parentFile.module.name)
+            if (flagsFrom.ignore)
                 return
-            _.each(file.includes(fileSource), function(headerFile) {
-                if (!flags.internal && headerFile.module === file.module)
-                    return
-                if (!flags.outdep && headerFile.module !== file.module)
-                    return
-                var flags2 = moduleFlags(moduleInfo, headerFile.module.name)
-                if (flags2.ignore)
-                    return
-                if (addLink(newLinks, file, headerFile))
-                    newFiles[headerFile.path] = headerFile
-            })
+            var needRecursion
+            if (parentFile.module !== file.module)
+                addLink(newLinks, parentFile, file)
+            if (parentFile.module !== data.originalFile.module)
+                needRecursion = options.indirect
+            else
+                needRecursion = true
+            if (needRecursion)
+                traceBackDependencies(newLinks, moduleInfo, parentFile, options, data)
         })
     })
 }
 
-makeLinksFrom = function makeLinksFrom(newLinks, newFiles, files, moduleInfo) {
-    _.each(files, function(file) {
-        var flags  = moduleFlags(moduleInfo, file.module.name)
-        if (flags.ignore)
-            return
-        var fileSources = file.allSourceFiles()
-        _.each(fileSources, function(fileSource) {
-            _.each(file.includedFrom(fileSource), function(parentFile) {
-                if (!flags.internal && parentFile.module === file.module)
-                    return
-                var flags2 = moduleFlags(moduleInfo, parentFile.module.name)
-                if (flags2.ignore)
-                    return
-                if (addLink(newLinks, parentFile, file))
-                    newFiles[parentFile.path] = parentFile
-            })
-        })
+makeLinksFrom = function makeLinksFrom(newLinks, moduleInfo, headerFiles, options) {
+    _.each(headerFiles, function(headerFile) {
+        traceBackDependencies(newLinks, moduleInfo, headerFile, options)
     })
 }
 
@@ -107,16 +147,9 @@ module.exports = function(req, res, next) {
     var fileName = visualizer + '-diagram-' + md5(JSON.stringify(q)) + '-' + reparseCount + '.svg'
     var url = '/tmp/' + fileName
 
-    // deBUG, TODO: Uncomment
-//    if (knownDiagrams[fileName])
-//        return res.send(url)
-    knownDiagrams[fileName] = 1
-
     var data = req.buildInfo.data
     if (!data)
         return res.status(412).send('Build information is not available')
-    var detailed = isTrue(q.detailed)
-    var indirect = isTrue(q.indirect)
 
     var allModuleInfo = {}
     function moduleInfo(moduleName) {
@@ -155,23 +188,9 @@ module.exports = function(req, res, next) {
 
     // Generate all links between files
     var links = {}
-    var newFilesTo = {}
-    var newFilesFrom = {}
-    makeLinks(links, newFilesTo, allSourceFiles, allModuleInfo, allSourceFiles)
-    makeLinksFrom(links, newFilesFrom, allHeaderFiles, allModuleInfo)
-    if (indirect) {
-        var veryNewFiles
-        while(!_.isEmpty(newFilesTo)) {
-            veryNewFiles = {}
-            makeLinks(links, veryNewFiles, newFilesTo, allModuleInfo, allSourceFiles)
-            newFilesTo = veryNewFiles
-        }
-        while(!_.isEmpty(newFilesFrom)) {
-            veryNewFiles = {}
-            makeLinksFrom(links, veryNewFiles, newFilesFrom, allModuleInfo)
-            newFilesFrom = veryNewFiles
-        }
-    }
+    var options = { indirect: isTrue(q.indirect) }
+    makeLinks(links, allModuleInfo, allSourceFiles, options)
+    makeLinksFrom(links, allModuleInfo, allHeaderFiles, options)
 
     // Turn links object into an array of links, each element will be an array [from, to]
     links = _.chain(links).keys().map(function(hash) {
@@ -181,12 +200,29 @@ module.exports = function(req, res, next) {
         return {from: from, to: to}
     }).value()
 
+    // Generate module links, which will ensure that all involved modules are in allModuleInfo
     _.each(links, function(link) {
         var moduleNameFrom = link.from.module.name
         var moduleNameTo = link.to.module.name
         moduleInfo(moduleNameFrom).links[moduleNameTo] = 1
         moduleInfo(moduleNameTo)
     })
+
+    // Compute the resulting object for the request
+    var result = {
+        url: url,
+        modules: _.reduce(allModuleInfo, function(acc, minfo, name) {
+            if (!minfo.flags.ignore)
+                acc.push(name)
+            return acc
+        }, [])
+    }
+
+    // deBUG: comment out to disable the use of cached diagrams
+    if (knownDiagrams[fileName])
+        return res.send(result)
+
+    var detailed = isTrue(q.detailed)
     if (detailed) {
         // Compute file hash, based on linked files
         var fileInfo = _.reduce(links, function(acc, link){
@@ -280,8 +316,10 @@ module.exports = function(req, res, next) {
                 console.log(err)
                 console.log(stderr)
             }
-            else
-                res.send(url)
+            else {
+                knownDiagrams[fileName] = 1
+                res.send(result)
+            }
         })
     })
 }

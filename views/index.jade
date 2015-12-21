@@ -42,7 +42,7 @@ block content
         #header {
             position: absolute;
             top: 0px;
-            height: 10ex;
+            height: 15ex;
             right: 0px;
             width: 80%;
             background-color: #eee;
@@ -50,7 +50,7 @@ block content
         }
         #diagram {
             position: absolute;
-            top: 10ex;
+            top: 15ex;
             bottom: 0px;
             right: 0px;
             width: 80%;
@@ -121,9 +121,20 @@ block content
             background-color: #fcc;
         }
 
+        .modulename {
+            padding-left: 12px;
+            background-image: url('/images/bullet_gray.png');
+            background-repeat: no-repeat;
+            background-position: left 2px center;
+        }
+
+        .current .modulename {
+            background-image: url('/images/bullet_green.png');
+        }
+
         /* see http://stackoverflow.com/questions/6258521/clear-icon-inside-input-text */
         .clearable{
-            background-image: url('/images/close-search.png');
+            background-image: url('/images/close_search.png');
             background-repeat: no-repeat;
             background-position: right -10px center;
             border: 1px solid #999;
@@ -165,12 +176,21 @@ block content
                     '<br/>internal: ' + p.internal.join(' ')
                     )
                 $.get('/diagram', p)
-                    .done(function(url) {
-                        $('#diagramImage').attr('src', url)
+                    .done(function(data) {
+                        var m = {}
+                        for (var i=0, n=data.modules.length; i<n; ++i)
+                            m[data.modules[i]] = 1
+                        $('.modulename').each(function() {
+                            var j = $(this), tr = j.parent()
+                            tr[m[j.text()]? 'addClass': 'removeClass'].call(tr, 'current')
+                        })
+                        $('#diagramImage').attr('src', data.url)
                     })
                     .fail(function(xhr, text) {
                         h.append('<br/>Failed to get diagram url: ' + (xhr.statusText || text) + ' (' + xhr.status + ')')
+                        $('#modules tbody').removeClass('current')
                     })
+                    .always(filterModules)
             }
             function moduleCheckboxChanged() {
                 var o = $(this)
@@ -341,7 +361,7 @@ block content
                     tbody
                         each module in req.buildInfo.data.sortedModules
                             tr(class=!module.built?'foreign':'')
-                                td= module.name
+                                td.modulename= module.name
                                 td
                                     input.internal(type='checkbox')
                                 td
