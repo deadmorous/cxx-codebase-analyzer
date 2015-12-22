@@ -5,10 +5,15 @@ function startsWith(what, withWhat) {
     return what.substr(0, withWhat.length) === withWhat
 }
 
-var tdcBuildInfoParam = {
+module.exports = {
     CXX: '/usr/bin/c++',
     buildPath: path.resolve(process.env.BUILDDIR),
-    srcRootPath: path.resolve(process.env.SRCDIR),
+    srcRootPath: (function() {
+        var result = path.resolve(process.env.SRCDIR)
+        if (result.substr(-1) !== '/')
+            result += '/'
+        return result
+    })(),
     ignoreSourceFilePath: function(filePath, srcRootPath, buildPath) {
         if (!startsWith(filePath, srcRootPath))
             // Ignore generated files
