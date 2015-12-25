@@ -36,6 +36,10 @@ TODO: more text here
   * ```srcRootPath``` The source root path, normally set to ```path.resolve(process.env.SRCDIR)```.
   * ```ignoreSourceFilePath``` function passed three arguments ```(filePath, srcRootPath, buildPath)```, returning ```true```
     if source file identified by ```filePath``` should be ignored, and ```false``` if it should be taken into account.
+    Note: by default, source files from the build directory are ignored, and all other source files are not ignored.
+  * ```ignoreHeaderFilePath``` function passed three arguments ```(filePath, srcRootPath, buildPath)```, returning ```true```
+    if header file identified by ```filePath``` should be ignored, and ```false``` if it should be taken into account.
+    Note: by default, header files from the build directory are ignored, and all other source files are not ignored.
   * ```parseSourceFilePath``` function passed the same three arguments ```(filePath, srcRootPath, buildPath)```, for files that have not been ignored
     (```ignoreSourceFilePath()``` returned ```false```). The function should return an object with the following properties (all strings):
     * ```module``` Module name for source file ```filePath```;

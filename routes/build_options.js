@@ -10,7 +10,7 @@ module.exports = {
     buildPath: path.resolve(process.env.BUILDDIR),
     srcRootPath: path.resolve(process.env.SRCDIR),
     ignoreSourceFilePath: function(filePath, srcRootPath, buildPath) {
-        return !startsWith(filePath, srcRootPath)
+        return startsWith(filePath, buildPath)
     },
     parseSourceFilePath: function(filePath, srcRootPath, buildPath)
     {

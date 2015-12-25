@@ -8,12 +8,7 @@ function startsWith(what, withWhat) {
 module.exports = {
     CXX: '/usr/bin/c++',
     buildPath: path.resolve(process.env.BUILDDIR),
-    srcRootPath: (function() {
-        var result = path.resolve(process.env.SRCDIR)
-        if (result.substr(-1) !== '/')
-            result += '/'
-        return result
-    })(),
+    srcRootPath: path.resolve(process.env.SRCDIR),
     ignoreSourceFilePath: function(filePath, srcRootPath, buildPath) {
         if (!startsWith(filePath, srcRootPath))
             // Ignore generated files

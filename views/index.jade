@@ -326,7 +326,10 @@ block content
                 }
 
                 function scanningError(xhr, text) {
-                    progressLabel.text((xhr.statusText || text) + ' (' + xhr.status + ')')
+                    var msg = (xhr.statusText || text)
+                    if (xhr.status)
+                    msg += ' (' + xhr.status + ')'
+                        progressLabel.text(msg)
                 }
 
                 progressbar.progressbar({
@@ -352,6 +355,9 @@ block content
                         .done(function(data) {
                             if (data.status === 'ready')
                                 progressbar.progressbar('value', 100)
+                            else if (data.status === 'failed') {
+                                scanningError({statusText: 'Failed to parse project files'})
+                            }
                             else {
                                 var value = Math.floor(data.progress * 100)
                                 if (value >= 100)

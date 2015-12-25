@@ -238,10 +238,26 @@ HeaderFile.prototype.clean = function() {
 
 function parseBuildLog(options, cb)
 {
+    function startsWith(what, withWhat) {
+        return what.substr(0, withWhat.length) === withWhat
+    }
+    function appendPathSeparator(str) {
+        if (str.substr(-1) !== path.sep)
+            str += path.sep
+        return str
+    }
+    function ignoreFileFromBuildDir(filePath, srcRootPath, buildPath) {
+        return startsWith(filePath, buildPath)
+    }
+
     runningStatus.start()
     options = options || {}
+    options.buildPath = appendPathSeparator(options.buildPath)
+    options.srcRootPath = appendPathSeparator(options.srcRootPath)
     if (!(options.ignoreSourceFilePath instanceof Function))
-        options.ignoreSourceFilePath = function() {}
+        options.ignoreSourceFilePath = ignoreFileFromBuildDir
+    if (!(options.ignoreHeaderFilePath instanceof Function))
+        options.ignoreHeaderFilePath = ignoreFileFromBuildDir
     var buildPath = options.buildPath
     var srcRootPath = options.srcRootPath
     var CXX = options.CXX || '/usr/bin/c++'
@@ -262,7 +278,8 @@ function parseBuildLog(options, cb)
                         lineData.defines.push(part)
                     else if(part.match(/^-I/))
                         lineData.includes.push(part)
-                    else if(part.match(/^(-std)/))
+                    else if(part.match(/^(-std|-fPIC)/))
+                        // Note: Qt headers may want -fPIC and produce #error if it is not specified
                         lineData.otherFlags.push(part)
                 }
                 else if (ipart > 0 && parts[ipart-1].substr(0,2) === '-i')
@@ -342,21 +359,22 @@ function parseBuildLog(options, cb)
 function extractIncludeDependencies(data, cb)
 {
     runningStatus.announceSourceFiles(data)
+    var o = data.options
+    var errorOccurred
     function extractSourceDependencies(sourceFile, cb)
     {
         child_process.exec(sourceFile.cmd, {encoding: 'utf8'}, function (error, stdout, stderr) {
-            runningStatus.sourceFileProcessed()
-            if (error)
+            if (errorOccurred || error) {
+                errorOccurred = true
                 return cb(error)
-            var done = false
+            }
+            runningStatus.sourceFileProcessed()
             var stack = [sourceFile.path]
+            var ignoreDepth = -1
             _.each(stderr.split('\n'), function(line) {
-                if (done)
-                    return
-                if (line[0] !== '.') {
-                    done = true
-                    return
-                }
+                if (line[0] !== '.')
+                    // Dependency tree has been processed, stop iterations
+                    return false
                 var m = line.match(/^(\.+)\s+(.+)$/)
                 if (!m)
                     throw new Error('Unexpected g++ output (syntax)')
@@ -367,7 +385,17 @@ function extractIncludeDependencies(data, cb)
                 stack[n] = to
                 if (stack.length > n+1)
                     stack.splice(n+1, stack.length-n)
-                data.addLink(sourceFile, from, to)
+                var ignoreNow
+                if (ignoreDepth !== -1 && n > ignoreDepth)
+                    ignoreNow = true
+                else if (o.ignoreHeaderFilePath(to, o.srcRootPath, o.buildPath)) {
+                    ignoreNow = true
+                    ignoreDepth = n
+                    }
+                else
+                    ignoreDepth = -1
+                if (!ignoreNow)
+                    data.addLink(sourceFile, from, to)
             })
             cb()
         })
