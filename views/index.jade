@@ -11,133 +11,149 @@ block stylesAndScripts
 
 block content
     style.
-        #param {
+        #left-panel {
             position: absolute;
             top: 0px;
-            height: 140px;
-            left: 0px;
             width: 20%;
-            background-color: #eee;
-            overflow: hidden;
-            border-radius: 0px 0px 10px 10px;
-        }
-        #filter {
-            position: absolute;
-            top: 140px;
-            height: 65px;
-            left: 0px;
-            width: 20%;
-            background-color: #ddd;
-            overflow: hidden;
-            border-radius: 10px;
-        }
-        #modules {
-            position: absolute;
-            top: 205px;
             bottom: 0px;
             left: 0px;
-            width: 20%;
-            overflow: auto;
+            display: flex;
+            flex-flow: column nowrap;
+            box-shadow: 3px 0px 10px 0px #ccc;
+            /* background-color: #fcc; */
+            background-color: #eee;
+            z-index: 10;
         }
-        #header {
+        #main-panel {
             position: absolute;
             top: 0px;
-            height: 15ex;
             right: 0px;
-            width: 80%;
+            bottom: 0px;
+            left: 20%;
+            display: flex;
+            flex-flow: column nowrap;
+        }
+        #top-panel {
             background-color: #eee;
-            overflow: hidden;
+            flex: 0 0 auto;
+        }
+        #top-panel > div {
+            padding: 5px;
         }
         #diagram {
-            position: absolute;
-            top: 15ex;
-            bottom: 0px;
-            right: 0px;
-            width: 80%;
-            background-color: #fff;
             overflow: auto;
+            flex: 1 1 auto;
+            padding: 5px;
+            /* background-color: #ccf; */
         }
-        .padding-h {
-            padding-left: 20px;
-            padding-right: 20px;
+
+        #left-panel > div {
+            /* background-color: #f88; */
+            margin: 5px;
         }
-        .padding {
-            padding: 20px;
-        }
-        .foreign td:nth-child(1) {
-            color: #aaa;
+        .param-container {
+            flex: 0 0 auto;
+            display: flex;
+            flex-flow: row wrap;
+            justify-content: space-between;
+            margin: 0px -5px;
         }
         .param {
-            padding: 10px 0px 8px 0px;
+            padding: 3px;
+            /* background-color: #5f5; */
+            margin: 0px 5px;
         }
-        .param span {
-            padding-right: 15px;
+        .param.wide {
+            width: 100%;
         }
-
-
-        .fixed-table-container-inner {
-          overflow-x: hidden;
-          overflow-y: auto;
-          height: 100%;
+        .param > * {
+            display: inline;
         }
-
-        .header-background {
-          background-color: #eee;
-          height: 77px; /* height of header */
-          position: absolute;
-          top: 0;
-          right: 17px;
-          left: 0;
-          box-shadow: 0px 5px 12px 0px #ccc;
-          border-radius: 0px 0px 10px 0px;
+        .param-label-left {
+            margin-right: 5px;
         }
-
-        #modules table {
-          background-color: white;
-          width: 100%;
-          overflow-x: hidden;
-          overflow-y: auto;
-          border-collapse: collapse;
+        .param-label-right {
+            margin-left: 5px;
+        }
+        #edge_length_param {
+            flex-grow: 100;
+        }
+        #edge_length {
+            display: inline-block;
+            width: 100%;
+            margin-top: 5px;
         }
 
-        .th-inner {
-          position: absolute;
-          top: 0;
+        #modules {
+            overflow-y: auto;
+            flex: 0 1 auto;
         }
-        th:nth-child(1) .th-inner {
-          text-align: right;
+        .with-border-top {
+            border-top: 1px solid #ddd;
         }
-        .th-content {
-            height: 75px;
+        .table-strut {
+            height: 77px;
         }
-        .th-inner div {
+        .fixed-column-header {
+            position: absolute;
+        }
+        .fixed-column-header div {
             height: 25px;
+        }
+        th:nth-child(1) .fixed-column-header {
+            text-align: right;
+        }
+        .fixed-header-background {
+            position: absolute;
+            background-color: #eee;
+            height: 77px;
+            left: 0px;
+            right: 18px;
+            box-shadow: 0px 5px 12px 0px #ccc;
+            border-radius: 0px 0px 10px 0px;
+        }
+        #modules table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fff;
         }
         .tr-odd {
             background-color: #eee;
         }
-
-        .bad-text-input {
-            background-color: #fcc;
-        }
-
         .modulename {
             padding-left: 12px;
             background-image: url('/images/bullet_gray.png');
             background-repeat: no-repeat;
             background-position: left 2px center;
         }
-
         .current .modulename {
             background-image: url('/images/bullet_green.png');
         }
-
+        .foreign td:nth-child(1) {
+            color: #aaa;
+        }
+        #rescan {
+            color: #c00;
+        }
+        .bad-text-input {
+            background-color: #fcc;
+        }
+        #info-message > p {
+            margin: 0px 0px 5px 0px;
+            padding: 0px;
+        }
+        #info-message > .error {
+            color: #c00;
+        }
+        .info-message-part-header {
+            font-weight: bold;
+        }
         #progress-overlay {
             background-color: #012;
             position: fixed;
             top: 0; right: 0; bottom: 0; left: 0;
             opacity: 0.5;
-            z-index: 10;
+            z-index: 20;
         }
         .ui-progressbar {
             position: absolute;
@@ -154,13 +170,6 @@ block content
             text-shadow: 1px 1px 0 #fff;
             text-align: center;
         }
-        #rescan, #buildInfo {
-            float: right;
-        }
-        #rescan {
-            color: #c00;
-        }
-
         /* see http://stackoverflow.com/questions/6258521/clear-icon-inside-input-text */
         .clearable{
             background-image: url('/images/close_search.png');
@@ -174,6 +183,7 @@ block content
         .clearable.x  { background-position: right 5px center; } /* (jQ) Show icon */
         .clearable.onX{ cursor: pointer; }              /* (jQ) hover cursor style */
         .clearable::-ms-clear {display: none; width:0; height:0;} /* Remove IE default X */
+
     script.
         $(document).ready(function() {
             var edge_length = 1
@@ -197,12 +207,14 @@ block content
             }
             function loadDiagram() {
                 var p = diagramParam()
-                var h = $('#header')
+                var h = $('#info-message')
+                function par(text) { return '<p>' + text + '</p>'}
+                function infoPart(partName, text) { return par('<span class="info-message-part-header">' + partName + ':</span> ' + text) }
                 h.html(
-                    'indep: ' + p.indep.join(' ') +
-                    '<br/>outdep: ' + p.outdep.join(' ') +
-                    '<br/>ignore: ' + p.ignore.join(' ') +
-                    '<br/>internal: ' + p.internal.join(' ')
+                    infoPart('internal', p.internal.join(' ')) +
+                    infoPart('outdep', p.outdep.join(' ')) +
+                    infoPart('indep', p.indep.join(' ')) +
+                    infoPart('ignore', p.ignore.join(' '))
                     )
                 $.get('/diagram', p)
                     .done(function(data) {
@@ -216,8 +228,11 @@ block content
                         $('#diagramImage').attr('src', data.url)
                     })
                     .fail(function(xhr, text) {
-                        h.append('<br/>Failed to get diagram url: ' + (xhr.statusText || text) + ' (' + xhr.status + ')')
-                        $('#modules tbody').removeClass('current')
+                        $(infoPart('Failed to get diagram url', (xhr.statusText || text) + ' (' + xhr.status + ')'))
+                            .addClass('error')
+                            .appendTo(h)
+                        $('#modules tbody tr').removeClass('current')
+                        $('#diagramImage').attr('src', 'images/question.png')
                     })
                     .always(filterModules)
             }
@@ -380,7 +395,7 @@ block content
             })()
 
             $('#buildInfo').click(function() {
-                $('#header').html($('#basicBuildInfo').html())
+                $('#info-message').html($('#basicBuildInfo').html())
             })
 
             // CLEARABLE INPUT
@@ -398,92 +413,101 @@ block content
                 })
             })()
         })
-    #param
-        .padding
-            div
-                span Visualizer
-                select#visualizer(selected='dot')
-                    option(value='dot') dot
-                    option(value='neato') neato
-                    option(value='fdp') fdp
-                    option(value='sfdp') sfdp
-                    option(value='twopi') twopi
-                    option(value='circo') circo
-                input#buildInfo(type='button' value='?')
-                input#rescan(type='button' value='rescan')
-            div
-                .param Edge length / rank separation
-                #edge_length
-            .param
-                input#indirect(type='checkbox')
-                span Indirect
-                input#detailed(type='checkbox')
-                span Detailed
-    #filter
-        .padding-h
-            .param
-                input.filter-option(type='radio' name='filter' value='' checked)
-                span All
-                input.filter-option(type='radio' name='filter' value=':not(.foreign)')
-                span Built
-                input.filter-option(type='radio' name='filter' value='.foreign')
-                span Not built
-                input.filter-option(type='radio' name='filter' value='.current')
-                span Current
-                br
-                span Name
-                input.clearable#filter-name(type='text' placeholder='regex pattern')
-    #modules
-        //-
-            Note: Fixed table header implementation is based on this:
-            http://salzerdesign.com/test/fixedTable.html
-        .header-background
-        .fixed-table-container-inner
+    #left-panel
+        div
+            .param-container
+                .param
+                    .param-label-left Visualizer
+                    select#visualizer(selected='dot')
+                        option(value='dot') dot
+                        option(value='neato') neato
+                        option(value='fdp') fdp
+                        option(value='sfdp') sfdp
+                        option(value='twopi') twopi
+                        option(value='circo') circo
+                .param
+                    input#rescan(type='button' value='rescan')
+                .param
+                    input#buildInfo(type='button' value='?')
+                .param.wide#edge_length_param
+                    .param-label-left Edge length / rank separation<br/>
+                    #edge_length
+                .param
+                    input#indirect(type='checkbox')
+                    .param-label-right Indirect
+                .param
+                    input#detailed(type='checkbox')
+                    .param-label-right Detailed
+        .with-border-top
+            .param-container
+                .param
+                    input.filter-option(type='radio' name='filter' value='' checked)
+                    .param-label-right All
+                .param
+                    input.filter-option(type='radio' name='filter' value=':not(.foreign)')
+                    .param-label-right Built
+                .param
+                    input.filter-option(type='radio' name='filter' value='.foreign')
+                    .param-label-right Not built
+                .param
+                    input.filter-option(type='radio' name='filter' value='.current')
+                    .param-label-right Current
+                .param
+                    .param-label-left Name
+                    input.clearable#filter-name(type='text' placeholder='regex pattern')
+        .with-border-top#modules
+            .fixed-header-background
             table
                 thead
                     tr
                         th
-                            .th-content
-                            .th-inner
+                            .fixed-column-header
                                 div module
                                 div all
                                 div none
+                            .table-strut
                         th
-                            .th-inner
+                            .fixed-column-header
                                 div o
                                 div
                                     input.internal_all(type='button')
                                 div
                                     input.internal_none(type='button')
+                            .table-strut
                         th
-                            .th-inner
+                            .fixed-column-header
                                 div ->
                                 div
                                     input.outdep_all(type='button')
                                 div
                                     input.outdep_none(type='button')
+                            .table-strut
                         th
-                            .th-inner
+                            .fixed-column-header
                                 div <-
                                 div
                                     input.indep_all(type='button')
                                 div
                                     input.indep_none(type='button')
+                            .table-strut
                         th
-                            .th-inner
+                            .fixed-column-header
                                 div x
                                 div
                                     input.ignore_all(type='button')
                                 div
                                     input.ignore_none(type='button')
+                            .table-strut
                 tbody
-    #header
+    #main-panel
+        #top-panel
+            #info-message
+        .with-border-top#diagram
+            .padding
+                img#diagramImage(src='images/question.png')
     #basicBuildInfo(style='display:none;')
         h1 Select modules to show diagram for
         h2 Build directory: #{req.buildInfo.options.buildPath}
-    #diagram
-        .padding
-            img#diagramImage(src='images/question.png')
     #progress-overlay
         #progressbar
             .progress-label Scanning dependencies...
